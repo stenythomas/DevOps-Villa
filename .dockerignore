@@ -1,0 +1,15 @@
+.git
+venv/
+.venv/
+.ci-venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+db.sqlite3
+media/
+staticfiles/
+security-reports/
+zap-output/
+.idea/
+.vscode/
