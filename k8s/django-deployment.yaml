@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django
+  namespace: villa
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      containers:
+        - name: django
+          image: stenythomas/villa-app:1
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8000
+
+          envFrom:
+            - configMapRef:
+                name: villa-config
+            - secretRef:
+                name: villa-secret
+
+          command:
+            - sh
+            - -c
+            - |
+              python manage.py migrate --noinput &&
+              python manage.py collectstatic --noinput &&
+              exec gunicorn --bind 0.0.0.0:8000 --workers 2 villaproject.wsgi:application
+
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+          volumeMounts:
+            - name: sqlite-storage
+              mountPath: /app/data
+            - name: static-storage
+              mountPath: /app/staticfiles
+            - name: media-storage
+              mountPath: /app/media
+
+      volumes:
+        - name: sqlite-storage
+          persistentVolumeClaim:
+            claimName: sqlite-pvc
+        - name: static-storage
+          persistentVolumeClaim:
+            claimName: static-pvc
+        - name: media-storage
+          persistentVolumeClaim:
+            claimName: media-pvc
